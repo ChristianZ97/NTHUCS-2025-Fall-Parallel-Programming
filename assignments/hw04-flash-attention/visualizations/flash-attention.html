@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>FlashAttention Blocked Attention Animation</title>
+  <style>
+    :root {
+      --q-color: #4caf50;
+      --k-color: #2196f3;
+      --v-color: #ff9800;
+      --o-color: #9c27b0;
+      --attn-highlight: rgba(76, 175, 80, 0.35);
+      --attn-border: #555;
+      --bg-light: #f5f5f5;
+      --sram-bg: #fffde7;
+      --hbm-bg: #e3f2fd;
+      --completed-color: #8bc34a;
+      --step-color: #f44336;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #fafafa;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 8px 0;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    button {
+      border-radius: 16px;
+      border: none;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #1976d2;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    button.secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #444;
+      margin-top: 4px;
+    }
+
+    .status strong {
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1.3fr;
+      gap: 12px;
+    }
+
+    .matrix-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .matrix-title-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 2px;
+    }
+
+    .matrix-grid {
+      display: grid;
+      gap: 1px;
+      background: #ddd;
+      border-radius: 4px;
+      padding: 3px;
+    }
+
+    .matrix-cell {
+      width: 18px;
+      height: 18px;
+      background: #fafafa;
+      border-radius: 2px;
+      box-sizing: border-box;
+      border: 1px solid rgba(0,0,0,0.03);
+      position: relative;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .matrix-cell.attn-bg {
+      background: #ffffff;
+    }
+
+    .matrix-cell.attn-active {
+      background: var(--attn-highlight);
+      border-color: var(--attn-border);
+      transform: scale(1.04);
+    }
+
+    .matrix-cell.attn-row-active {
+      background: rgba(33, 150, 243, 0.15);
+    }
+
+    .matrix-cell.attn-col-active {
+      background: rgba(255, 152, 0, 0.15);
+    }
+
+    .matrix-cell.q {
+      background: var(--q-color);
+    }
+    .matrix-cell.k {
+      background: var(--k-color);
+    }
+    .matrix-cell.v {
+      background: var(--v-color);
+    }
+    .matrix-cell.o {
+      background: #e1bee7;
+    }
+    .matrix-cell.o-complete {
+      background: var(--completed-color);
+    }
+
+    .matrix-cell.block-border {
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.5);
+    }
+
+    .matrix-label {
+      font-size: 11px;
+      margin-bottom: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    .legend-color.q { background: var(--q-color); }
+    .legend-color.k { background: var(--k-color); }
+    .legend-color.v { background: var(--v-color); }
+    .legend-color.o { background: var(--o-color); }
+    .legend-color.attn { background: var(--attn-highlight); border: 1px solid var(--attn-border); }
+    .legend-color.complete { background: var(--completed-color); }
+
+    .memory-panel {
+      background: linear-gradient(135deg, var(--hbm-bg), #fff);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .memory-heading {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .memory-section {
+      margin-top: 4px;
+    }
+
+    .memory-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.08);
+      margin-right: 4px;
+      margin-bottom: 3px;
+    }
+
+    .sram {
+      background: var(--sram-bg);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .sram-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sram-slots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .sram-slot {
+      flex: 1 1 80px;
+      min-width: 80px;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px dashed rgba(0,0,0,0.15);
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sram-label {
+      font-size: 11px;
+    }
+
+    .sram-pill {
+      font-size: 10px;
+      border-radius: 10px;
+      padding: 1px 6px;
+      background: #c5e1a5;
+    }
+
+    .sram-pill.empty {
+      background: #eeeeee;
+    }
+
+    .metrics {
+      font-size: 11px;
+      margin-top: 6px;
+      color: #555;
+    }
+
+    .highlight {
+      color: #d32f2f;
+      font-weight: 600;
+    }
+
+    .code-inline {
+      font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      background: rgba(0,0,0,0.03);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    @media (max-width: 800px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>FlashAttention 區塊式注意力動畫 (簡化示意)</h1>
+  <div class="subtitle">
+    Q、K、V 分塊在 SRAM 上以雙層迴圈計算注意力，避免在 HBM 中物化完整 N×N 注意力矩陣。
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">控制列與狀態</div>
+    <div class="controls">
+      <button id="playBtn">▶ 播放</button>
+      <button id="pauseBtn" class="secondary" disabled>⏸ 暫停</button>
+      <button id="stepBtn" class="secondary">⏭ 單步</button>
+      <button id="resetBtn" class="secondary">⟲ 重設</button>
+      <span style="margin-left:8px;font-size:12px;color:#555;">
+        N = 12, B<sub>r</sub> = 4, B<sub>c</sub> = 4 (固定為小型例子，方便觀看)
+      </span>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div class="layout">
+    <!-- 左側：矩陣視覺化 -->
+    <div class="panel">
+      <div class="panel-title">HBM 中的概念矩陣與序列分塊</div>
+      <div class="matrix-container">
+        <!-- Attention matrix (conceptual, not fully stored) -->
+        <div>
+          <div class="matrix-title-row">
+            <span class="matrix-label">
+              概念注意力矩陣 <span class="code-inline">S ≈ QKᵀ</span> （僅高亮目前 B<sub>r</sub>×B<sub>c</sub> 區塊）
+            </span>
+            <span style="font-size:11px;color:#777;">行：Q 區塊 i，列：K 區塊 j</span>
+          </div>
+          <div id="attnMatrix" class="matrix-grid"></div>
+        </div>
+
+        <!-- Q、K、V、O 條狀分塊 -->
+        <div>
+          <div class="matrix-label">Q（長度 N 的序列，被切成 row blocks B<sub>r</sub>）</div>
+          <div id="qStrip" class="matrix-grid"></div>
+        </div>
+        <div>
+          <div class="matrix-label">K（長度 N 的序列，被切成 col blocks B<sub>c</sub>）</div>
+          <div id="kStrip" class="matrix-grid"></div>
+        </div>
+        <div>
+          <div class="matrix-label">V（與 K 同樣的分塊）</div>
+          <div id="vStrip" class="matrix-grid"></div>
+        </div>
+        <div>
+          <div class="matrix-label">O（輸出；每個 Q row-block 完成後標記為完成）</div>
+          <div id="oStrip" class="matrix-grid"></div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color q"></div> <span>Q token</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color k"></div> <span>K token</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color v"></div> <span>V token</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color o"></div> <span>O（輸出）</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color attn"></div> <span>目前計算的 B<sub>r</sub>×B<sub>c</sub> 區塊</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color complete"></div> <span>該 Q row-block 的 O 已累積完成</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側：記憶體層級與 SRAM 狀態 -->
+    <div class="panel">
+      <div class="panel-title">記憶體層級 + on-chip SRAM（簡化示意）</div>
+      <div class="memory-panel">
+        <div class="memory-heading">GPU 記憶體層級</div>
+        <div class="memory-section">
+          <div class="memory-tag">HBM：儲存完整 Q、K、V、O</div>
+          <div class="memory-tag">SRAM：一次僅載入 Q<sub>i</sub>、K<sub>j</sub>、V<sub>j</sub> 分塊</div>
+        </div>
+        <div class="memory-section">
+          <span style="font-size:11px;">
+            FlashAttention 使用分塊計算，反覆在 SRAM 中運算並累積，避免將整個 N×N
+            注意力矩陣寫入 HBM。
+          </span>
+        </div>
+      </div>
+
+      <div class="sram">
+        <div class="sram-title">當前 SRAM 狀態（簡化）</div>
+        <div class="sram-slots">
+          <div class="sram-slot">
+            <span class="sram-label">Q 分塊 Q<sub>i</sub></span>
+            <span id="sramQ" class="sram-pill empty">空</span>
+          </div>
+          <div class="sram-slot">
+            <span class="sram-label">K 分塊 K<sub>j</sub></span>
+            <span id="sramK" class="sram-pill empty">空</span>
+          </div>
+          <div class="sram-slot">
+            <span class="sram-label">V 分塊 V<sub>j</sub></span>
+            <span id="sramV" class="sram-pill empty">空</span>
+          </div>
+          <div class="sram-slot">
+            <span class="sram-label">局部運算 S<sub>ij</sub>, P<sub>ij</sub></span>
+            <span id="sramS" class="sram-pill empty">空</span>
+          </div>
+        </div>
+        <div class="metrics" id="metrics"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========= 可調整的簡化參數 =========
+    const N = 12;      // 序列長度（只視覺化序列維度，不顯示 head 維度 d）
+    const Br = 4;      // row block 大小
+    const Bc = 4;      // col block 大小
+
+    // i = 0..Tr-1, j = 0..Tc-1
+    const Tr = Math.ceil(N / Br);
+    const Tc = Math.ceil(N / Bc);
+
+    // DOM 物件
+    const attnMatrixEl = document.getElementById('attnMatrix');
+    const qStripEl = document.getElementById('qStrip');
+    const kStripEl = document.getElementById('kStrip');
+    const vStripEl = document.getElementById('vStrip');
+    const oStripEl = document.getElementById('oStrip');
+    const statusEl = document.getElementById('status');
+    const metricsEl = document.getElementById('metrics');
+
+    const sramQEl = document.getElementById('sramQ');
+    const sramKEl = document.getElementById('sramK');
+    const sramVEl = document.getElementById('sramV');
+    const sramSEl = document.getElementById('sramS');
+
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stepBtn = document.getElementById('stepBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // 動畫狀態
+    let currentStep = 0;     // 0 .. Tr*Tc-1
+    let playing = false;
+    let timer = null;
+
+    // 建立概念注意力矩陣 NxN (只用來高亮當前 Br×Bc 區塊)
+    const attnCells = [];
+    function buildAttnMatrix() {
+      attnMatrixEl.style.gridTemplateColumns = `repeat(${N}, 18px)`;
+      attnMatrixEl.style.gridTemplateRows = `repeat(${N}, 18px)`;
+      attnMatrixEl.innerHTML = '';
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'matrix-cell attn-bg';
+          attnMatrixEl.appendChild(cell);
+          attnCells.push(cell);
+        }
+      }
+    }
+
+    // 一維 strip（Q, K, V, O）建立
+    function buildStrip(container, type) {
+      container.style.gridTemplateColumns = `repeat(${N}, 18px)`;
+      container.style.gridTemplateRows = `repeat(1, 18px)`;
+      container.innerHTML = '';
+      const cells = [];
+      for (let i = 0; i < N; i++) {
+        const cell = document.createElement('div');
+        cell.className = `matrix-cell ${type}`;
+        container.appendChild(cell);
+        cells.push(cell);
+      }
+      return cells;
+    }
+
+    const qCells = buildStrip(qStripEl, 'q');
+    const kCells = buildStrip(kStripEl, 'k');
+    const vCells = buildStrip(vStripEl, 'v');
+    const oCells = buildStrip(oStripEl, 'o');
+
+    buildAttnMatrix();
+
+    // 判斷某個 token index 屬於哪個 row-block / col-block
+    function rowBlockIndex(pos) {
+      return Math.floor(pos / Br);  // 0..Tr-1
+    }
+    function colBlockIndex(pos) {
+      return Math.floor(pos / Bc);  // 0..Tc-1
+    }
+
+    // 高亮目前的 Br×Bc 區塊，以及對應的 Q/K/V/O 分塊邊框
+    function renderStep(step) {
+      // 由 step 反推 (i, j)
+      const i = step % Tr;         // row block index
+      const j = Math.floor(step / Tr); // col block index
+
+      // 清除所有狀態
+      attnCells.forEach(cell => {
+        cell.classList.remove('attn-active', 'attn-row-active', 'attn-col-active');
+      });
+      qCells.forEach(c => c.classList.remove('block-border'));
+      kCells.forEach(c => c.classList.remove('block-border'));
+      vCells.forEach(c => c.classList.remove('block-border'));
+
+      // 高亮 NxN 矩陣中的 Br×Bc block
+      const rowStart = i * Br;
+      const rowEnd = Math.min(rowStart + Br, N);
+      const colStart = j * Bc;
+      const colEnd = Math.min(colStart + Bc, N);
+
+      for (let r = rowStart; r < rowEnd; r++) {
+        for (let c = colStart; c < colEnd; c++) {
+          const idx = r * N + c;
+          attnCells[idx].classList.add('attn-active');
+        }
+      }
+
+      // 整個 row-block / col-block 的淡色標示（顯示正在掃過的行/列）
+      for (let r = rowStart; r < rowEnd; r++) {
+        for (let c = 0; c < N; c++) {
+          const idx = r * N + c;
+          if (!attnCells[idx].classList.contains('attn-active')) {
+            attnCells[idx].classList.add('attn-row-active');
+          }
+        }
+      }
+      for (let c = colStart; c < colEnd; c++) {
+        for (let r = 0; r < N; r++) {
+          const idx = r * N + c;
+          if (!attnCells[idx].classList.contains('attn-active')) {
+            attnCells[idx].classList.add('attn-col-active');
+          }
+        }
+      }
+
+      // Q 的 row-block 加上外框
+      for (let t = rowStart; t < rowEnd; t++) {
+        qCells[t].classList.add('block-border');
+      }
+
+      // K, V 的 col-block 加上外框
+      for (let t = colStart; t < colEnd; t++) {
+        kCells[t].classList.add('block-border');
+        vCells[t].classList.add('block-border');
+      }
+
+      // 更新 O：對應 row-block i，在所有 j 都被掃過後視為「完成」
+      // 每一個 row-block i 需要跑完 j = 0..Tc-1（一輪外層掃過 K/V 的所有 col-block）
+      // 我的 step 排序是：對每個 j，掃過所有 i  ->  (i = 0..Tr-1, j 固定)
+      // 因此 row-block i 會在 j 走過 0..Tc-1 的最後一次更新時完成。
+      for (let ri = 0; ri < Tr; ri++) {
+        let finished = true;
+        for (let cj = 0; cj < Tc; cj++) {
+          const linearIndex = cj * Tr + ri; // 反向映射到 step
+          if (linearIndex > step) {
+            finished = false;
+            break;
+          }
+        }
+        const rs = ri * Br;
+        const re = Math.min(rs + Br, N);
+        for (let idx = rs; idx < re; idx++) {
+          if (finished) {
+            oCells[idx].classList.add('o-complete');
+          } else {
+            oCells[idx].classList.remove('o-complete');
+          }
+        }
+      }
+
+      // 更新 SRAM 狀態
+      sramQEl.textContent = `Q[${rowStart} : ${rowEnd}]`;
+      sramQEl.classList.remove('empty');
+      sramKEl.textContent = `K[${colStart} : ${colEnd}]`;
+      sramKEl.classList.remove('empty');
+      sramVEl.textContent = `V[${colStart} : ${colEnd}]`;
+      sramVEl.classList.remove('empty');
+      sramSEl.textContent = `Sᵢⱼ, Pᵢⱼ (Br×Bc)`;
+      sramSEl.classList.remove('empty');
+
+      // 更新說明文字
+      const humanI = i + 1;
+      const humanJ = j + 1;
+      statusEl.innerHTML = `
+        <strong>目前步驟：</strong>
+        外層 j = <span class="highlight">${humanJ}</span> / ${Tc}（K/V col-block），
+        內層 i = <span class="highlight">${humanI}</span> / ${Tr}（Q row-block）。<br/>
+        正在 SRAM 上計算 Q<sub>${humanI}</sub> × K<sub>${humanJ}</sub><sup>T</sup> 對應的局部注意力 S<sub>ij</sub>，
+        並累積到 O 的第 ${humanI} 個 row-block。
+      `;
+
+      // 顯示簡單「IO 次數」估計（只當作教學用，不是精確公式）
+      const totalBlocks = Tr * Tc;
+      const doneBlocks = step + 1;
+      metricsEl.innerHTML = `
+        已處理區塊：<span class="highlight">${doneBlocks}</span> / ${totalBlocks}
+        （每個區塊需要載入一個 Q row-block 與一個 K/V col-block 到 SRAM，然後寫回 O 的 row-block）。
+      `;
+    }
+
+    function clearAllHighlights() {
+      attnCells.forEach(cell => {
+        cell.classList.remove('attn-active', 'attn-row-active', 'attn-col-active');
+      });
+      qCells.forEach(c => c.classList.remove('block-border'));
+      kCells.forEach(c => c.classList.remove('block-border'));
+      vCells.forEach(c => c.classList.remove('block-border'));
+      oCells.forEach(c => c.classList.remove('o-complete'));
+      sramQEl.textContent = '空';
+      sramKEl.textContent = '空';
+      sramVEl.textContent = '空';
+      sramSEl.textContent = '空';
+      sramQEl.classList.add('empty');
+      sramKEl.classList.add('empty');
+      sramVEl.classList.add('empty');
+      sramSEl.classList.add('empty');
+    }
+
+    function updateButtons() {
+      playBtn.disabled = playing || currentStep >= Tr * Tc - 1;
+      pauseBtn.disabled = !playing;
+    }
+
+    function stepOnce() {
+      const maxStep = Tr * Tc - 1;
+      if (currentStep > maxStep) return;
+      renderStep(currentStep);
+      currentStep++;
+      updateButtons();
+    }
+
+    function play() {
+      if (playing) return;
+      playing = true;
+      updateButtons();
+      if (currentStep >= Tr * Tc) {
+        // 已經跑完，從頭開始
+        currentStep = 0;
+      }
+      timer = setInterval(() => {
+        if (currentStep >= Tr * Tc) {
+          pause();
+          return;
+        }
+        stepOnce();
+      }, 700);
+    }
+
+    function pause() {
+      playing = false;
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      updateButtons();
+    }
+
+    function reset() {
+      pause();
+      currentStep = 0;
+      clearAllHighlights();
+      statusEl.innerHTML = `
+        按「播放」或「單步」開始。此動畫使用雙層迴圈：
+        先固定 K/V 的 col-block（外層 j），在該 j 底下依序掃過所有 Q row-block（內層 i），
+        並在 SRAM 上以 Br×Bc 的區塊進行注意力計算與累積。
+      `;
+      metricsEl.innerHTML = '';
+      updateButtons();
+    }
+
+    // 綁定按鈕事件
+    playBtn.addEventListener('click', play);
+    pauseBtn.addEventListener('click', pause);
+    stepBtn.addEventListener('click', () => {
+      if (currentStep >= Tr * Tc) return;
+      stepOnce();
+    });
+    resetBtn.addEventListener('click', reset);
+
+    // 初始化
+    reset();
+  </script>
+</body>
+</html>

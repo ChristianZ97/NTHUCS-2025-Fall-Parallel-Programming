@@ -1,0 +1,58 @@
+diff --git a/src/ucp/core/ucp_worker.c b/src/ucp/core/ucp_worker.c
+index 5adcee9..5639db5 100644
+--- a/src/ucp/core/ucp_worker.c
++++ b/src/ucp/core/ucp_worker.c
+@@ -1760,6 +1760,8 @@ static void ucp_worker_add_feature_rsc(ucp_context_h context,
+     ucs_string_buffer_appendf(strb, ") ");
+ }
+ 
++#define UCS_CONFIG_PRINT_TLS UCS_BIT(8)
++
+ static void
+ ucp_worker_print_used_tls(ucp_worker_h worker, ucp_worker_cfg_index_t cfg_index)
+ {
+@@ -1778,6 +1780,9 @@ ucp_worker_print_used_tls(ucp_worker_h worker, ucp_worker_cfg_index_t cfg_index)
+     int num_valid_lanes             = 0;
+     ucp_lane_index_t lane;
+ 
++    ucp_config_print((const ucp_config_t *)&context->config, stdout, NULL,
++                     UCS_CONFIG_PRINT_TLS);
++
+     ucp_ep_config_name(worker, cfg_index, &strb);
+ 
+     for (lane = 0; lane < key->num_lanes; ++lane) {
+@@ -1852,7 +1857,7 @@ ucp_worker_print_used_tls(ucp_worker_h worker, ucp_worker_cfg_index_t cfg_index)
+ 
+     ucs_string_buffer_rtrim(&strb, "; ");
+ 
+-    ucs_info("%s", ucs_string_buffer_cstr(&strb));
++    printf("%s\n", ucs_string_buffer_cstr(&strb));
+ }
+ 
+ static ucs_status_t ucp_worker_init_mpools(ucp_worker_h worker)
+diff --git a/src/ucs/config/parser.c b/src/ucs/config/parser.c
+index a13d508..d8ca40e 100644
+--- a/src/ucs/config/parser.c
++++ b/src/ucs/config/parser.c
+@@ -1850,6 +1850,8 @@ ucs_config_parser_print_opts_recurs(FILE *stream, const void *opts,
+     }
+ }
+ 
++#define UCS_CONFIG_PRINT_TLS UCS_BIT(8)
++
+ void ucs_config_parser_print_opts(FILE *stream, const char *title, const void *opts,
+                                   ucs_config_field_t *fields, const char *table_prefix,
+                                   const char *prefix, ucs_config_print_flags_t flags)
+@@ -1877,9 +1879,10 @@ void ucs_config_parser_print_opts(FILE *stream, const char *title, const void *o
+                                             prefix, &prefix_list);
+     }
+ 
+-    // TODO: PP-HW-UCX
+-    if (flags /*& UCS_CONFIG_PRINT_TLS*/) {
++    if (flags & UCS_CONFIG_PRINT_TLS) {
++        const char *tls = getenv("UCX_TLS");
+ 
++        fprintf(stream, "UCX_TLS=%s\n", (tls == NULL) ? "<unset>" : tls);
+     }
+ 
+     if (flags & UCS_CONFIG_PRINT_HEADER) {

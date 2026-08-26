@@ -1,0 +1,11 @@
+Program,Unroll_Factor,Total_Execution_Time,Avg_Thread_Imbalance_Pct,Type
+hw2a_unroll16,16,362.7897,3.4348,hw2a
+hw2a_unroll1,1,683.1274,3.4275,hw2a
+hw2a_unroll2,2,434.5361,3.4535,hw2a
+hw2a_unroll4,4,318.8519,3.3789,hw2a
+hw2a_unroll8,8,281.4000,3.4863,hw2a
+hw2b_unroll16,16,137.4879,52.4566,hw2b
+hw2b_unroll1,1,234.0749,35.6325,hw2b
+hw2b_unroll2,2,147.9553,46.8547,hw2b
+hw2b_unroll4,4,115.6670,54.5723,hw2b
+hw2b_unroll8,8,112.2422,56.3070,hw2b

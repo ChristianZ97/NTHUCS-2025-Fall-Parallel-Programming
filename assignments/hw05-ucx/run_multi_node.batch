@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --job-name=ucx-multi
+#SBATCH --output=multi_node_result.out
+#SBATCH --nodes=2
+#SBATCH --ntasks=2
+#SBATCH --time=00:05:00
+#SBATCH --mem=1000
+#SBATCH --partition=origo
+
+# 1. 環境設定
+module load openmpi/ucx-pp
+export LD_LIBRARY_PATH=/opt/openmpi/5.0.8/lib:$LD_LIBRARY_PATH
+
+# 2. 準備 UCX Libraries (LD_PRELOAD)
+ucx_lib_directory="$HOME/ucx-pp/lib"
+ld_preload_paths=$(find "$ucx_lib_directory" -name 'libucp.so.0' -o -name 'libuct.so.0' -o -name 'libucm.so.0' -o -name 'libucs.so.0' | tr '\n' ':' | sed 's/:$//')
+
+# 3. 實驗設定
+OSU_DIR="$HOME/hw5/UCX-lsalab/test/mpi/osu"
+OUT_DIR="$HOME/hw5/osu_results_multi"
+mkdir -p $OUT_DIR
+
+EXE_LAT="$OSU_DIR/pt2pt/osu_latency"
+
+# 4. 執行實驗並存 CSV
+# UCX_TLS=all leaves transport selection to UCX for this two-node run.
+
+CSV_FILE="$OUT_DIR/multi_node_latency.csv"
+
+echo "Running Multi-node Latency Test..."
+echo "Size,Latency_MultiNode" > $CSV_FILE
+
+# 使用 srun 執行，並透過 grep/awk 處理輸出
+# 注意：為了避免 grep 緩衝問題，有時需要 unbuffer，但這裡簡單處理即可
+srun --export ALL,LD_PRELOAD=${ld_preload_paths}:${LD_PRELOAD},UCX_TLS=all \
+     $EXE_LAT 2>&1 | \
+     grep -v "UCX" | grep -v "^#" | grep -v "^\[" | \
+     awk '{if(NF==2 && $1 ~ /^[0-9]+$/) print $1 "," $2}' >> $CSV_FILE
+
+echo "Done! Results saved to $CSV_FILE"
+cat $CSV_FILE # 在 log 中印出以供檢查

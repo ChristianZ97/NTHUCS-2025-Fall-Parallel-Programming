@@ -1,0 +1,10 @@
+ExeName,VersionID,Description,GrandTotalTime_ms,GrandComputeTime_ms
+hw4_0_baseline,0,baseline,61509.954,52674.363
+hw4_1_unroll,1,unroll,61148.675,52756.240
+hw4_2_2D_align,2,2D_align,43107.191,33268.796
+hw4_3_block_tuning,3,block_tuning,40342.703,32031.652
+hw4_4_coalesced,4,coalesced,38881.058,30688.474
+hw4_5_padding,5,padding,12654.407,4616.400
+hw4_6_streaming,6,streaming,7752.287,984.791
+hw4_7_occupancy,7,occupancy,7216.572,734.623
+hw4_8_restrict,8,restrict,7089.007,721.649

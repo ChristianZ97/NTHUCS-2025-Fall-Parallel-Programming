@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Blocked FW Dataflow Visualization (Highlight Phase 2 vs 3)</title>
+  <style>
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background-color: #f0f2f5;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 900px;
+      width: 100%;
+    }
+
+    h1 { font-size: 22px; margin: 0 0 16px 0; color: #333; }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    
+    button {
+      padding: 6px 12px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    button:hover { background: #eef; border-color: #aaf; }
+    button.primary { background: #007bff; color: white; border: none; }
+    button.primary:hover { background: #0056b3; }
+
+    #canvas-container {
+      position: relative;
+      margin: 20px auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    td {
+      width: 40px;
+      height: 40px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #888;
+      position: relative;
+      transition: background-color 0.3s;
+    }
+
+    /* Block Borders */
+    .b-top { border-top: 2px solid #333; }
+    .b-left { border-left: 2px solid #333; }
+    .b-bot { border-bottom: 2px solid #333; }
+    .b-right { border-right: 2px solid #333; }
+
+    /* Phase Colors */
+    .pivot-block { background-color: #333 !important; color: white !important; font-weight: bold; }
+    .phase2-target { background-color: #4dabf7 !important; color: white !important; font-weight: bold; }
+    .phase3-target { background-color: #ff6b6b !important; color: white !important; font-weight: bold; }
+    
+    /* Dependency Highlights */
+    .source-highlight { 
+      box-shadow: inset 0 0 0 3px #ffd43b; 
+      font-weight: bold;
+      color: #000 !important;
+    }
+
+    #status-panel {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e7f5ff;
+      border-left: 5px solid #228be6;
+      border-radius: 4px;
+    }
+    .phase-title { font-weight: bold; font-size: 16px; display: block; margin-bottom: 4px; }
+    .mem-hint { font-size: 13px; color: #555; margin-top: 4px; font-family: monospace; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+    /* Arrows Layer */
+    #arrow-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .legend {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+      font-size: 13px;
+      justify-content: center;
+    }
+    .dot { width: 12px; height: 12px; display: inline-block; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Blocked Floyd-Warshall: Phase 2 vs 3 Visualization</h1>
+  
+  <div class="controls">
+    <div>
+      <label>V (vertices): <input type="number" id="vInput" value="8" min="4" max="12" style="width: 50px"></label>
+      <label>B (block size): <input type="number" id="bInput" value="4" min="2" max="6" style="width: 50px"></label>
+      <button onclick="resetSystem()">Reset / Apply</button>
+    </div>
+    <div style="flex-grow: 1; text-align: right;">
+      <button onclick="prevStep()">◀ Previous</button>
+      <button class="primary" onclick="nextStep()">Next ▶</button>
+    </div>
+  </div>
+
+  <div id="status-panel">
+    <span id="status-text" class="phase-title">Ready to start...</span>
+    <div id="mem-desc" class="mem-hint">Click "Next" to start the algorithm demo</div>
+  </div>
+
+  <div id="canvas-container">
+    <table id="grid"></table>
+    <svg id="arrow-layer"></svg>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#333"></span>Pivot Block (Phase 1)</span>
+    <span><span class="dot" style="background:#4dabf7"></span>Phase 2 Target (Shared Mem)</span>
+    <span><span class="dot" style="background:#ff6b6b"></span>Phase 3 Target (Register)</span>
+    <span><span class="dot" style="background:none; border:2px solid #ffd43b"></span>Data source</span>
+  </div>
+</div>
+
+<script>
+  let V = 8;
+  let B = 4;
+  let currentStepIndex = -1;
+  let steps = [];
+  
+  const grid = document.getElementById('grid');
+  const svg = document.getElementById('arrow-layer');
+  const statusText = document.getElementById('status-text');
+  const memDesc = document.getElementById('mem-desc');
+
+  function resetSystem() {
+    V = parseInt(document.getElementById('vInput').value);
+    B = parseInt(document.getElementById('bInput').value);
+    if (B > V) { B = V; document.getElementById('bInput').value = B; }
+    
+    generateSteps();
+    drawGrid();
+    currentStepIndex = -1;
+    updateVisuals(null);
+    statusText.innerText = `Ready: V=${V}, B=${B}, Total Rounds=${Math.ceil(V/B)}`;
+    memDesc.innerText = "Click Next to start";
+  }
+
+  function generateSteps() {
+    steps = [];
+    const rounds = Math.ceil(V/B);
+    
+    for (let r = 0; r < rounds; r++) {
+      // Step 1: Phase 1 (Pivot Block)
+      steps.push({
+        round: r, phase: 1, 
+        target: {r: r, c: r},
+        sources: [], // Self dependency; usually no arrow to avoid clutter
+        desc: `Round ${r}: Phase 1 - update pivot block`,
+        mem: `Shared mem: Load the entire pivot block into SM, compute, then write back.`
+      });
+
+      // Step 2: Phase 2 (Row & Col)
+      // For clarity, we show row and column targets together and highlight their dependency on the pivot block
+      let p2Targets = [];
+      let p2Sources = [{r:r, c:r}]; // Source is the pivot block
+      
+      for(let k=0; k<rounds; k++) {
+        if(k === r) continue;
+        p2Targets.push({r: r, c: k}); // Row block
+        p2Targets.push({r: k, c: r}); // Column block
+      }
+
+      steps.push({
+        round: r, phase: 2,
+        targets: p2Targets,
+        sources: p2Sources,
+        desc: `Round ${r}: Phase 2 - update pivot row/column`,
+        mem: `Shared mem: Load pivot (source) and self (target) into SM. Self is also an input source (dependency), so keeping it in SM is safest.`
+      });
+
+      // Step 3: Phase 3 (Others)
+      // This is the key part: show how it behaves like blocked matrix multiplication
+      let p3Targets = [];
+      // To keep the animation readable, pick one Phase 3 block as a detailed demo target
+      // but still mark all Phase 3 blocks.
+      
+      // Find a demo Phase 3 block, preferably on the "opposite" side of the diagonal
+      let demoR = (r + 1) % rounds;
+      let demoC = (r + 1) % rounds;
+      if (demoR === r) demoR = (r + 2) % rounds; // Avoid overlap with pivot
+
+      // All Phase 3 blocks
+      for(let i=0; i<rounds; i++) {
+        for(let j=0; j<rounds; j++) {
+          if (i !== r && j !== r) {
+            p3Targets.push({r: i, c: j});
+          }
+        }
+      }
+
+      steps.push({
+        round: r, phase: 3,
+        targets: p3Targets,
+        demoTarget: {r: demoR, c: demoC},
+        // Sources are Phase 2 results: the corresponding row and column blocks
+        sources: [
+          {r: r, c: demoC}, // Pivot row block for this demo target
+          {r: demoR, c: r}  // Pivot column block for this demo target
+        ],
+        desc: `Round ${r}: Phase 3 - update remaining blocks`,
+        mem: `★ Register blocking: Keep sources (yellow) in SM and lock the target (red block) in registers. This is like matrix multiplication and avoids repeatedly reading/writing SM.`
+      });
+    }
+  }
+
+  function drawGrid() {
+    grid.innerHTML = '';
+    svg.innerHTML = '';
+    
+    for (let i = 0; i < V; i++) {
+      let tr = document.createElement('tr');
+      for (let j = 0; j < V; j++) {
+        let td = document.createElement('td');
+        td.id = `cell-${i}-${j}`;
+        td.innerText = '∞'; // Just a visual placeholder
+        if (i === j) td.innerText = '0';
+        
+        // Block borders
+        if (i % B === 0) td.classList.add('b-top');
+        if (j % B === 0) td.classList.add('b-left');
+        if (i === V-1) td.classList.add('b-bot');
+        if (j === V-1) td.classList.add('b-right');
+        
+        tr.appendChild(td);
+      }
+      grid.appendChild(tr);
+    }
+  }
+
+  function drawArrow(fromBlock, toBlock) {
+    // Compute approximate center coordinates of each block
+    let midR = fromBlock.r * B + Math.floor(B/2);
+    let midC = fromBlock.c * B + Math.floor(B/2);
+    if (midR >= V) midR = V-1;
+    if (midC >= V) midC = V-1;
+    
+    let fromEl = document.getElementById(`cell-${midR}-${midC}`);
+    if (!fromEl) return;
+    let fromRect = fromEl.getBoundingClientRect();
+    let containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+
+    let midR2 = toBlock.r * B + Math.floor(B/2);
+    let midC2 = toBlock.c * B + Math.floor(B/2);
+    if (midR2 >= V) midR2 = V-1;
+    if (midC2 >= V) midC2 = V-1;
+
+    let toEl = document.getElementById(`cell-${midR2}-${midC2}`);
+    if (!toEl) return;
+    let toRect = toEl.getBoundingClientRect();
+
+    let x1 = fromRect.left + fromRect.width/2 - containerRect.left;
+    let y1 = fromRect.top + fromRect.height/2 - containerRect.top;
+    let x2 = toRect.left + toRect.width/2 - containerRect.left;
+    let y2 = toRect.top + toRect.height/2 - containerRect.top;
+
+    let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    
+    // Slightly curved path
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    let ctrlX = (x1 + x2) / 2 - dy * 0.2;
+    let ctrlY = (y1 + y2) / 2 + dx * 0.2;
+
+    path.setAttribute("d", `M${x1},${y1} Q${ctrlX},${ctrlY} ${x2},${y2}`);
+    path.setAttribute("stroke", "#ffd43b");
+    path.setAttribute("stroke-width", "3");
+    path.setAttribute("fill", "none");
+    path.setAttribute("marker-end", "url(#arrowhead)");
+    path.style.filter = "drop-shadow(1px 1px 2px rgba(0,0,0,0.3))";
+    
+    // Animation
+    path.style.strokeDasharray = "1000";
+    path.style.strokeDashoffset = "1000";
+    path.style.animation = "dash 1s forwards ease-out";
+
+    svg.appendChild(path);
+  }
+
+  function setupArrowHead() {
+    let defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    let marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "10");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+    
+    let polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    polygon.setAttribute("points", "0 0, 10 3.5, 0 7");
+    polygon.setAttribute("fill", "#ffd43b");
+    
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+    
+    let style = document.createElement("style");
+    style.innerHTML = `
+      @keyframes dash {
+        to { stroke-dashoffset: 0; }
+      }
+    `;
+    svg.appendChild(style);
+  }
+
+  function updateVisuals(step) {
+    // Clear styles
+    document.querySelectorAll('td').forEach(td => {
+      td.className = td.className.replace(/pivot-block|phase2-target|phase3-target|source-highlight/g, '').trim();
+    });
+    svg.innerHTML = '';
+    setupArrowHead();
+
+    if (!step) return;
+
+    // Highlight source blocks
+    if (step.sources) {
+        step.sources.forEach(blk => {
+            highlightBlock(blk.r, blk.c, 'source-highlight');
+        });
+    }
+
+    // Highlight target blocks
+    let targetClass = '';
+    if (step.phase === 1) targetClass = 'pivot-block';
+    else if (step.phase === 2) targetClass = 'phase2-target';
+    else targetClass = 'phase3-target';
+
+    if (step.phase === 1) {
+        highlightBlock(step.target.r, step.target.c, targetClass);
+    } else {
+        step.targets.forEach(blk => {
+            highlightBlock(blk.r, blk.c, targetClass);
+        });
+    }
+
+    // Draw arrows (only for Phase 2 and Phase 3 to reduce clutter)
+    // Phase 3: only draw arrows for the demo target
+    if (step.phase === 3 && step.demoTarget) {
+        step.sources.forEach(src => {
+            drawArrow(src, step.demoTarget);
+        });
+    } else if (step.phase === 2) {
+         // Phase 2: from pivot to all row/column targets
+         step.targets.forEach(tgt => {
+             drawArrow(step.sources[0], tgt);
+         });
+    }
+
+    statusText.innerText = step.desc;
+    memDesc.innerText = step.mem;
+  }
+
+  function highlightBlock(br, bc, className) {
+      let startR = br * B;
+      let startC = bc * B;
+      for (let i=0; i<B; i++) {
+          for(let j=0; j<B; j++) {
+              let r = startR + i;
+              let c = startC + j;
+              if (r < V && c < V) {
+                  document.getElementById(`cell-${r}-${c}`).classList.add(className);
+              }
+          }
+      }
+  }
+
+  function nextStep() {
+      if (steps.length === 0) resetSystem();
+      if (currentStepIndex < steps.length - 1) {
+          currentStepIndex++;
+          updateVisuals(steps[currentStepIndex]);
+      }
+  }
+
+  function prevStep() {
+      if (currentStepIndex > 0) {
+          currentStepIndex--;
+          updateVisuals(steps[currentStepIndex]);
+      }
+  }
+
+  // Init
+  resetSystem();
+</script>
+
+</body>
+</html>
