@@ -13,6 +13,6 @@ and the environment needed to build or reproduce the work.
 | [Lab 6](lab06-flash-attention-benchmark/) | Attention-kernel benchmarking | CUDA through PyTorch and FlashAttention |
 
 Where present, `submission/` preserves the source and build artifacts that were
-submitted for the lab. Reports containing personal or course identifiers are
-kept only in a private archival snapshot and are not included in this
-public-facing tree.
+submitted for the lab. Lab 6 also includes its byte-exact submitted report.
+No student-authored report for Labs 1–4 exists in the retained remote refs or
+history; this is recorded rather than implying an unavailable private copy.

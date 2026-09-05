@@ -91,6 +91,15 @@ uv run --with pandas --with numpy --with matplotlib --with pillow \
 The recorded profiling and timing figures are under `presentation/`. They are
 hardware-specific experiment artifacts, not portable performance guarantees.
 
+## Original presentation
+
+The final 27-slide team deck is preserved byte-for-byte at
+[`submission/presentation.pptx`](submission/presentation.pptx). It names the
+three contributors with their submitted student identifiers and retains its
+original Office authorship metadata. Its hash provenance is recorded in the
+root [`SUBMISSIONS.md`](../SUBMISSIONS.md). The replaced draft deck and the
+presentation video remain private.
+
 ## Layout
 
 ```text
@@ -101,6 +110,7 @@ animate.py                     Trajectory renderer
 testcases/                     Inputs and expected CSV trajectories
 variants/                      GPU design snapshots grouped by optimization idea
 presentation/                  Recorded plots and animation
+submission/presentation.pptx  Byte-exact final team presentation
 ```
 
 The variant directories preserve intermediate design exploration. The root

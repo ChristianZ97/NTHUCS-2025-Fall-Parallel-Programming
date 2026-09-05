@@ -21,6 +21,7 @@ output. They share the SSE2 row kernel, argument parser, and PNG writer under
 
 - `src/`: canonical, profiling-free portfolio implementation
 - `submission/`: unmodified grading-time sources and build files
+- `submission/report.pdf`: byte-exact submitted report
 - `results/load-balance-*`: scheduling summaries for Pthreads and MPI+OpenMP
 - `results/scalability-*`: process/thread scaling summary and figures
 - `results/unroll-*`: loop-unrolling summary and figure
@@ -61,6 +62,8 @@ Building requires a C++17 compiler, Pthreads, OpenMP, MPI compiler wrappers,
 and libpng. The root Makefile uses `-march=native`. The original measurements
 also assumed Slurm and the course cluster configuration.
 
-`submission/` preserves the grading-time source and build files. The submitted
-report, which contains a student identifier, remains only on the private
-legacy snapshot, together with the parameter-sweep sources and runners.
+`submission/` preserves the grading-time source, build files, and
+[`report.pdf`](submission/report.pdf) byte-for-byte. The report intentionally
+retains its original author identity; hash provenance is recorded in the root
+[`SUBMISSIONS.md`](../../SUBMISSIONS.md). Parameter-sweep sources and runners
+remain on the private legacy snapshot.

@@ -28,7 +28,8 @@ disabled (`proto_enable=false`).
 
 - `patches/ucx-transport-info.patch`: canonical, directly applicable patch
 - `submission/hw5.diff`: exact grading-time diff retained for provenance
-- `submission/report.md`: identifier-free public copy of the written analysis
+- `submission/report.md`: byte-exact submitted Markdown report
+- `portfolio-report.md`: identifier-free portfolio rewrite of the analysis
 - `run_osu.sh`: single-node OSU point-to-point and one-sided benchmark runner
 - `run_multi_node.batch`: two-node OSU latency job
 - `osu_results/`: single-node CSV tables
@@ -79,6 +80,9 @@ configuration. Re-running the measurements also requires Open MPI with UCX,
 the OSU micro-benchmarks, access to the configured InfiniBand device, and
 Slurm for the multi-node job.
 
-`submission/` preserves the grading-time patch and an identifier-free report
-copy. Original report artifacts containing a student identifier remain only on
-the private legacy snapshot.
+`submission/` preserves the grading-time patch and
+[`report.md`](submission/report.md) byte-for-byte. The report body contains no
+student identifier; only its private-source filename did. The cleaned
+[`portfolio-report.md`](portfolio-report.md) remains the easier standalone
+reading path. Hash provenance is recorded in the root
+[`SUBMISSIONS.md`](../../SUBMISSIONS.md).

@@ -1,0 +1,2 @@
+# Preserve exact submitted text bytes; do not normalize or whitespace-check them.
+assignments/hw05-ucx/submission/report.md -text -diff

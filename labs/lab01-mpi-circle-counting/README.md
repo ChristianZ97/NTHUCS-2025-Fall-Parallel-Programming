@@ -18,8 +18,8 @@ chunks, assigns one chunk to each MPI rank, and combines the partial counts with
 - `submission/module.list`: module search paths from the course cluster.
 
 The `submission/` directory preserves the submitted source and build artifacts.
-The report containing personal or course identifiers is kept only in the
-private archival snapshot.
+No separate student-authored report was found in the retained remote refs or
+history.
 
 ## Build And Run
 

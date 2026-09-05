@@ -23,8 +23,8 @@ quadrant count modulo `k`.
   course cluster.
 
 The `submission/` directory preserves the submitted source and build artifacts.
-The report containing personal or course identifiers is kept only in the
-private archival snapshot.
+No separate student-authored report was found in the retained remote refs or
+history.
 
 ## Build And Run
 

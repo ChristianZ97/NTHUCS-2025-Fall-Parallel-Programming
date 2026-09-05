@@ -20,6 +20,7 @@ their target devices.
 
 - `src/`: canonical CUDA and HIP implementations used by the Makefile
 - `submission/`: grading-time implementations retained for provenance
+- `submission/report.pdf`: byte-exact submitted report
 - `Makefile`: builds the canonical CUDA and HIP implementations
 - `results/`: selected optimization summary and figure
 - `visualizations/flash-attention.html`: interactive tiled-attention
@@ -68,6 +69,7 @@ C++14. A compatible GPU toolchain and device are required. Architecture flags
 must be changed when building for other GPU generations.
 
 `submission/` preserves the grading-time source files and is not used by the
-default build. The submitted report, which contains a student identifier,
-remains only on the private legacy snapshot, together with tile sweeps and
-intermediate kernels.
+default build. Its byte-exact [`report.pdf`](submission/report.pdf)
+intentionally retains the original author identity; hash provenance is in the
+root [`SUBMISSIONS.md`](../../SUBMISSIONS.md). Tile sweeps and intermediate
+kernels remain only on the private legacy snapshot.

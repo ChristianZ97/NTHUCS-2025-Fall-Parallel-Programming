@@ -20,6 +20,7 @@ submitted kernels, memory layouts, streams, events, and peer-to-peer transfers.
 
 - `src/`: primary, portfolio-facing sources
 - `submission/`: unmodified grading-time sources and Makefile
+- `submission/report.pdf`: byte-exact submitted report
 - `results/`: selected CUDA and HIP blocking-factor measurements
 - `visualizations/blocked-floyd-warshall.html`: interactive view of the blocked
   algorithm's phases
@@ -64,6 +65,7 @@ wrapped, so accelerator failures still require checking the CUDA or HIP runtime
 diagnostics. `submission/` preserves the grading-time source and build files
 byte for byte.
 
-The submitted report, which contains a student identifier, remains only on the
-private legacy snapshot, together with profiling and exploratory source
-variants.
+The byte-exact [`submission/report.pdf`](submission/report.pdf) intentionally
+retains its original author identity; hash provenance is recorded in the root
+[`SUBMISSIONS.md`](../../SUBMISSIONS.md). Profiling and exploratory source
+variants remain only on the private legacy snapshot.

@@ -19,9 +19,9 @@ two-dimensional CUDA grid so threads process output pixels in parallel.
 - `submission/mnist.cpp`: OpenACC inference implementation.
 - `submission/sobel.cu`: CUDA Sobel implementation with PNG input and output.
 
-The `submission/` directory preserves the submitted source artifacts. The
-course build files and report containing personal or course identifiers are
-kept only in a private archival snapshot.
+The `submission/` directory preserves the submitted source artifacts. Course
+build files remain private; no separate student-authored report was found in
+the retained remote refs or history.
 
 ## Requirements
 

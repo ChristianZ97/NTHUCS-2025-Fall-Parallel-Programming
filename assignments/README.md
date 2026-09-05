@@ -26,9 +26,11 @@ Development variants and raw experiment output remain in the private legacy
 history. These figures document the grading-time implementation lineage; the
 portfolio cleanup has not been presented as a fresh benchmark run.
 
-Course handouts, private test cases, raw profiler captures, and reports whose
-filenames or contents expose student identifiers are not part of the public
-tree. They remain available in the private legacy snapshot.
+The byte-exact student-authored reports are included in each assignment's
+`submission/` directory and intentionally retain their submitted identity
+information. Course handouts, private test cases, raw profiler captures, and
+other course-owned material remain only in the private legacy snapshot. See
+the root [`SUBMISSIONS.md`](../SUBMISSIONS.md) for hashes and provenance.
 
 The build files retain the compiler and architecture settings used on the
 course cluster. Reproducing a run elsewhere may require different GPU targets,

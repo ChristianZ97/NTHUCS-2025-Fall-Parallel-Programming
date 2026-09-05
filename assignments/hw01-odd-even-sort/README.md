@@ -12,7 +12,8 @@ The portfolio-facing implementation is `src/mpi_odd_even_sort.cc`. It keeps
 the submitted algorithm's non-profiling path: MPI-IO, an active communicator
 limited to ranks with data, boundary-first exchanges, partial merge-splits,
 buffer pointer swaps, and a collective sortedness check. Profiling
-instrumentation and timing reports are intentionally omitted from this view.
+instrumentation and timing-output branches are intentionally omitted from the
+canonical source view.
 
 `submission/hw1.cc` is the original grading-time source. It remains unchanged
 with its original Makefile and optional profiling path.
@@ -22,6 +23,7 @@ with its original Makefile and optional profiling path.
 - `src/mpi_odd_even_sort.cc`: canonical, profiling-free implementation
 - `Makefile`: builds the canonical implementation
 - `submission/`: original grading-time source, Makefile, and module list
+- `submission/report.pdf`: byte-exact submitted report
 - `results/scaling-summary.csv`: per-case scaling summary
 - `results/strong-scaling.png`: grouped strong-scaling overview
 
@@ -63,6 +65,8 @@ Both Makefiles expect an MPI C++ compiler, C++17, and the Boost Spreadsort
 header. They use `-march=native`, so generated binaries are specific to the
 build host.
 
-`submission/` preserves the grading-time source and build files. The submitted
-report, which contains a student identifier, remains only on the private
-legacy snapshot, together with development variants and raw measurements.
+`submission/` preserves the grading-time source, build files, and
+[`report.pdf`](submission/report.pdf) byte-for-byte. The report intentionally
+retains its original author identity; hash provenance is recorded in the root
+[`SUBMISSIONS.md`](../../SUBMISSIONS.md). Development variants and raw
+measurements remain on the private legacy snapshot.

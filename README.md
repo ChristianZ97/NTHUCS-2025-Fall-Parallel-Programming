@@ -26,6 +26,8 @@ OpenMP, OpenACC, CUDA, and FlashAttention benchmarking.
 assignments/   Portfolio implementations and selected result summaries
 labs/          Focused parallel-programming exercises
 final-project/ Team N-body implementation, validation tools, and visualizations
+SUBMISSIONS.md Exact submitted-report and presentation inventory
+CURATION.md    Source recovery point and publication boundary
 ```
 
 Each assignment presents a cleaned canonical implementation separately from
@@ -41,9 +43,12 @@ partitions, CUDA compute capabilities, ROCm targets, and profiler availability
 are environment-specific. The per-project READMEs record the original build
 and run interface; reproduce performance measurements on comparable hardware.
 
-The public-facing tree omits course handouts, report PDFs containing personal
-identifiers, raw profiler captures, and large presentation media. Those files
-are not required to inspect the implementations.
+The public-facing tree includes the byte-exact student-authored reports and
+final presentation under project `submission/` directories. These originals
+are intentionally unredacted and retain names, student identifiers, a school
+email address, and Office authorship metadata. See
+[`SUBMISSIONS.md`](SUBMISSIONS.md) for hashes and provenance. Course handouts,
+raw profiler captures, and the final presentation video remain excluded.
 
 ## Academic Use
 

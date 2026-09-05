@@ -22,10 +22,12 @@ interface.
 - `results/benchmark-results.csv`: recorded benchmark data.
 - `results/plot.py`: script that reads the CSV and recreates the figures.
 - `results/plot_results/`: generated result figures.
+- `submission/report.pdf`: byte-exact submitted report.
 
 The retained files preserve the submitted benchmark and result artifacts. The
-report containing personal or course identifiers is kept only in a private
-archival snapshot.
+byte-exact [`submission/report.pdf`](submission/report.pdf) intentionally
+retains its original author identity; hash provenance is recorded in the root
+[`SUBMISSIONS.md`](../../SUBMISSIONS.md).
 
 ## Requirements
 
